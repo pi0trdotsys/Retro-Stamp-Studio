@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   DEFAULT_STAMP,
   STAMP_COLORS,
@@ -8,7 +9,10 @@ import {
   type StampColor,
   type StampConfig,
   type StampPosition,
+  type StampStyleId,
 } from "@/lib/stamps";
+import { blobToBase64, renderStamp } from "@/lib/render-stamp";
+import { readCaptureDate, toDateInputValue, toTimeInputValue } from "@/lib/exif-date";
 import heroPhoto from "@/assets/hero-photo.jpg";
 import beforeThumb from "@/assets/before-thumb.jpg";
 
@@ -45,18 +49,39 @@ const POSITION_CLASSES: Record<StampPosition, string> = {
   CB: "left-1/2 bottom-3 -translate-x-1/2 text-center",
 };
 
+/** CSS font-family token (podgląd DOM) per styl stempla — trzyma się w parze z `canvasFont()` w stamps.ts. */
+const STYLE_FONT_VAR: Record<StampStyleId, string> = {
+  quartz: "var(--font-pixel)",
+  gameboy: "var(--font-pixel)",
+  polaroid: "var(--font-hand)",
+  typewriter: "var(--font-display)",
+  vhs: "var(--font-mono)",
+  film: "var(--font-mono)",
+  exif: "var(--font-mono)",
+  digicam: "var(--font-mono)",
+  receipt: "var(--font-mono)",
+};
+
+/** Kolor swatcha w kafelku presetu (b) — zawsze ten sam, niezależnie od aktualnie wybranego koloru stempla. */
+const PRESET_SWATCH_COLOR: Record<StampStyleId, string> = {
+  quartz: STAMP_COLORS.amber,
+  film: STAMP_COLORS.amber,
+  vhs: STAMP_COLORS.phosphor,
+  exif: STAMP_COLORS.phosphor,
+  gameboy: STAMP_COLORS.phosphor,
+  digicam: STAMP_COLORS.cream,
+  typewriter: STAMP_COLORS.cream,
+  receipt: STAMP_COLORS.cream,
+  polaroid: "#2a2318",
+};
+
 function StampOverlay({ config }: { config: StampConfig }) {
   const preset = getPreset(config.style);
   const lines = preset.format(config.date, config.time);
   const color = STAMP_COLORS[config.color];
   const basePx = 16 * config.scale;
 
-  const fontFamily =
-    config.style === "quartz"
-      ? "var(--font-pixel)"
-      : config.style === "polaroid"
-        ? "var(--font-hand)"
-        : "var(--font-mono)";
+  const fontFamily = STYLE_FONT_VAR[config.style];
 
   return (
     <div
@@ -88,6 +113,7 @@ export function Index() {
   const [photoName, setPhotoName] = useState("IMG_0014.jpg");
   const [photoDims, setPhotoDims] = useState("1080×1350");
   const [dragOver, setDragOver] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -99,6 +125,18 @@ export function Index() {
     const img = new Image();
     img.onload = () => setPhotoDims(`${img.naturalWidth}×${img.naturalHeight}`);
     img.src = url;
+
+    // Best-effort: zaproponuj datę/godzinę zrobienia zdjęcia (EXIF
+    // DateTimeOriginal, fallback = data modyfikacji pliku) zamiast trzymać
+    // sztywną datę makiety — użytkownik wciąż może ją nadpisać ręcznie.
+    void readCaptureDate(file).then((captured) => {
+      if (!captured) return;
+      setConfig((c) => ({
+        ...c,
+        date: toDateInputValue(captured),
+        time: toTimeInputValue(captured),
+      }));
+    });
   }, []);
 
   useEffect(() => {
@@ -107,53 +145,63 @@ export function Index() {
     };
   }, [photoUrl]);
 
-  /** Eksport: rysuje zdjęcie + stempel na canvasie w natywnej rozdzielczości. */
+  /**
+   * Eksport: renderuje zdjęcie + stempel na canvasie (src/lib/render-stamp.ts)
+   * w natywnej rozdzielczości źródła, a potem zapisuje wynik zależnie od
+   * platformy:
+   *  - web: zwykły `<a download>` na Blob URL (jak dotąd),
+   *  - natywnie w Capacitorze: WebView (w odróżnieniu od Chrome) nie umie
+   *    "pobrać" data:/blob: URL-a przez klik w <a download> — trzeba zapisać
+   *    plik przez Filesystem i oddać go użytkownikowi natywnym Share Sheet
+   *    (skąd może zapisać do Zdjęć albo wysłać dalej). To właśnie był powód,
+   *    dla którego eksport nie działał w spakowanym APK.
+   */
   const exportStamped = useCallback(async () => {
     const source = imageRef.current;
-    if (!source) return;
+    if (!source || isExporting) return;
 
-    await document.fonts.ready;
+    setIsExporting(true);
+    try {
+      const blob = await renderStamp(source, config);
+      const fileName = photoName.replace(/\.[^.]+$/, "") + "_stamped.png";
 
-    const canvas = document.createElement("canvas");
-    canvas.width = source.naturalWidth;
-    canvas.height = source.naturalHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
-
-    const preset = getPreset(config.style);
-    const lines = preset.format(config.date, config.time);
-    const margin = Math.round(canvas.height * 0.02);
-    const fontPx = Math.round(canvas.height * 0.028 * config.scale);
-
-    ctx.font = preset.canvasFont(fontPx);
-    ctx.fillStyle = STAMP_COLORS[config.color];
-    ctx.textBaseline = "top";
-    if (preset.glow) {
-      ctx.shadowColor = STAMP_COLORS[config.color];
-      ctx.shadowBlur = Math.round(fontPx * 0.35);
+      const { Capacitor } = await import("@capacitor/core");
+      if (Capacitor.isNativePlatform()) {
+        const [{ Filesystem, Directory }, { Share }] = await Promise.all([
+          import("@capacitor/filesystem"),
+          import("@capacitor/share"),
+        ]);
+        const base64 = await blobToBase64(blob);
+        const written = await Filesystem.writeFile({
+          path: fileName,
+          data: base64,
+          directory: Directory.Cache,
+        });
+        await Share.share({
+          title: "Zapisz stemplowane zdjęcie",
+          dialogTitle: "Zapisz lub udostępnij zdjęcie",
+          files: [written.uri],
+        });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = fileName;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        toast.success("Zdjęcie wyeksportowane", { description: fileName });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Eksport się nie powiódł", {
+        description: error instanceof Error ? error.message : "Spróbuj ponownie.",
+      });
+    } finally {
+      setIsExporting(false);
     }
-
-    const lineHeight = fontPx * 1.15;
-    const blockHeight = lineHeight * lines.length;
-    const isLeft = config.position === "TL" || config.position === "BL";
-    const isRight = config.position === "TR" || config.position === "BR";
-    const isTop = config.position === "TL" || config.position === "TR" || config.position === "CT";
-
-    ctx.textAlign = isLeft ? "left" : isRight ? "right" : "center";
-    const x = isLeft ? margin : isRight ? canvas.width - margin : canvas.width / 2;
-    const y = isTop ? margin : canvas.height - margin - blockHeight;
-
-    lines.forEach((line, i) => {
-      ctx.fillText(line, x, y + i * lineHeight);
-    });
-
-    const link = document.createElement("a");
-    link.download = photoName.replace(/\.[^.]+$/, "") + "_stamped.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  }, [config, photoName]);
+  }, [config, photoName, isExporting]);
 
   const set = <K extends keyof StampConfig>(key: K, value: StampConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: value }));
@@ -262,7 +310,9 @@ export function Index() {
         {/* (b) film-strip presets */}
         <div className="flex items-center justify-between pt-2 text-[10px] uppercase tracking-[0.15em] text-cam-dim">
           <span>(b) STAMP STYLE</span>
-          <span className="text-cam-phosphor">05 LOADED</span>
+          <span className="text-cam-phosphor">
+            {STAMP_PRESETS.length.toString().padStart(2, "0")} LOADED
+          </span>
         </div>
         <section className="flex gap-2 -mx-4 px-4 overflow-x-auto pb-1">
           {STAMP_PRESETS.map((preset, i) => {
@@ -284,17 +334,15 @@ export function Index() {
                   }`}
                 >
                   <span
-                    className={preset.id === "quartz" ? "seg text-lg" : "text-[11px] leading-tight"}
+                    className={
+                      preset.id === "quartz" || preset.id === "gameboy"
+                        ? "seg text-lg"
+                        : "text-[11px] leading-tight"
+                    }
                     style={{
-                      fontFamily:
-                        preset.id === "polaroid" ? "var(--font-hand)" : undefined,
+                      fontFamily: preset.id === "polaroid" ? "var(--font-hand)" : undefined,
                       fontSize: preset.id === "polaroid" ? 15 : undefined,
-                      color:
-                        preset.id === "polaroid"
-                          ? "#2a2318"
-                          : preset.id === "quartz" || preset.id === "film"
-                            ? STAMP_COLORS.amber
-                            : STAMP_COLORS.phosphor,
+                      color: PRESET_SWATCH_COLOR[preset.id],
                     }}
                   >
                     {previewLines.map((l, j) => (
@@ -429,9 +477,10 @@ export function Index() {
           <button
             type="button"
             onClick={exportStamped}
-            className="mt-3 w-full py-3 rounded-[8px] bg-cam-amber text-cam-bg font-display font-bold text-sm uppercase tracking-[0.1em] cursor-pointer hover:brightness-110 transition"
+            disabled={isExporting}
+            className="mt-3 w-full py-3 rounded-[8px] bg-cam-amber text-cam-bg font-display font-bold text-sm uppercase tracking-[0.1em] cursor-pointer hover:brightness-110 transition disabled:cursor-wait disabled:opacity-70"
           >
-            Export stamped photo
+            {isExporting ? "Exporting…" : "Export stamped photo"}
           </button>
           <p className="mt-2 text-center text-[10px] uppercase tracking-[0.15em] text-cam-dim">
             PNG · {photoDims} · no watermark

@@ -6,7 +6,16 @@
  * Szczegóły implementacji logiki: docs/IMPLEMENTATION.md.
  */
 
-export type StampStyleId = "quartz" | "vhs" | "film" | "polaroid" | "exif";
+export type StampStyleId =
+  | "quartz"
+  | "vhs"
+  | "film"
+  | "polaroid"
+  | "exif"
+  | "digicam"
+  | "typewriter"
+  | "gameboy"
+  | "receipt";
 
 export type StampPosition = "TL" | "TR" | "BL" | "BR" | "CT" | "CB";
 
@@ -48,6 +57,30 @@ function pad(n: number): string {
 function parseDate(date: string): { y: string; yy: string; m: string; d: string } {
   const [y = "1996", m = "12", d = "04"] = date.split("-");
   return { y, yy: y.slice(-2), m, d };
+}
+
+const MONTHS_EN = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/** "HH:MM" (24h) → zegar 12-godzinny z AM/PM, np. "6:52 PM". */
+function to12h(time: string): { h12: string; mm: string; period: "AM" | "PM" } {
+  const [hStr = "0", mm = "00"] = time.split(":");
+  const h = Number(hStr);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return { h12: String(h12), mm, period };
 }
 
 export const STAMP_PRESETS: StampPreset[] = [
@@ -105,6 +138,52 @@ export const STAMP_PRESETS: StampPreset[] = [
     },
     canvasFont: (px) => `${Math.round(px * 0.5)}px "IBM Plex Mono", monospace`,
     glow: true,
+  },
+  {
+    id: "digicam",
+    label: "Digicam",
+    sublabel: "Y.M.D",
+    format: (date, time) => {
+      const { y, m, d } = parseDate(date);
+      return [`${y}.${m}.${d}  ${time}`];
+    },
+    canvasFont: (px) => `${Math.round(px * 0.5)}px "IBM Plex Mono", monospace`,
+    glow: false,
+  },
+  {
+    id: "typewriter",
+    label: "Typewriter",
+    sublabel: "Journal",
+    format: (date, time) => {
+      const { y, m, d } = parseDate(date);
+      const month = MONTHS_EN[Math.min(Math.max(Number(m) - 1, 0), 11)];
+      const { h12, mm, period } = to12h(time);
+      return [`${month}. ${Number(d)}, ${y} — ${h12}:${mm} ${period}`];
+    },
+    canvasFont: (px) => `${Math.round(px * 0.6)}px "Space Mono", monospace`,
+    glow: false,
+  },
+  {
+    id: "gameboy",
+    label: "Pixel LCD",
+    sublabel: "Handheld",
+    format: (date, time) => {
+      const { yy, m, d } = parseDate(date);
+      return [`${d}/${m}/${yy}`, time];
+    },
+    canvasFont: (px) => `${Math.round(px * 1.05)}px VT323, monospace`,
+    glow: true,
+  },
+  {
+    id: "receipt",
+    label: "Receipt",
+    sublabel: "Thermal",
+    format: (date, time) => {
+      const { y, m, d } = parseDate(date);
+      return [`* * ${y}-${m}-${d} ${time} * *`];
+    },
+    canvasFont: (px) => `${Math.round(px * 0.55)}px "IBM Plex Mono", monospace`,
+    glow: false,
   },
 ];
 
