@@ -79,7 +79,10 @@ function StampOverlay({ config }: { config: StampConfig }) {
   );
 }
 
-function Index() {
+// Exported (not just used as the route's `component`) so the standalone
+// Capacitor/APK entry (apk/main.tsx) can render the exact same screen
+// client-side, with no TanStack Router/Start involved.
+export function Index() {
   const [config, setConfig] = useState<StampConfig>(DEFAULT_STAMP);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState("IMG_0014.jpg");
@@ -157,8 +160,13 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background text-cam-cream font-mono selection:bg-cam-amber selection:text-cam-bg">
-      {/* sticky nav */}
-      <header className="sticky top-0 z-20 border-b border-cam-line bg-background/90">
+      {/* sticky nav — extra top padding accounts for the status bar / notch when
+          running edge-to-edge in the Capacitor Android shell; env() resolves to 0
+          in regular browsers (no viewport-fit=cover there), so the website is unaffected */}
+      <header
+        className="sticky top-0 z-20 border-b border-cam-line bg-background/90"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="mx-auto max-w-md px-4 py-3 flex items-center justify-between">
           <div className="flex items-baseline gap-2">
             <span className="text-cam-amber font-display font-bold tracking-tight text-lg">
@@ -173,7 +181,10 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-md px-4 pb-10 space-y-4">
+      <main
+        className="mx-auto max-w-md px-4 pb-10 space-y-4"
+        style={{ paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}
+      >
         {/* (a) source */}
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] text-cam-dim pt-3 animate-rise">
           <span>(a) SOURCE</span>
