@@ -9,7 +9,10 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:apk:web": "vite build --config apk/vite.config.ts",
+    "cap:sync": "npm run build:apk:web && cap sync android",
+    "build:apk": "npm run cap:sync && cd android && ./gradlew assembleDebug"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -69,6 +72,9 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^2.15.0",
     "@types/node": "^22.16.5",
