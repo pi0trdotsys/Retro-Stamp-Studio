@@ -251,6 +251,17 @@ function applyThermal(ctx: CanvasRenderingContext2D, w: number, h: number, t: Th
   ctx.putImageData(image, 0, 0);
 }
 
+function toGrayscale(ctx: CanvasRenderingContext2D, w: number, h: number, invert: boolean) {
+  const image = ctx.getImageData(0, 0, w, h);
+  const d = image.data;
+  for (let i = 0; i < d.length; i += 4) {
+    let v = 0.299 * d[i]! + 0.587 * d[i + 1]! + 0.114 * d[i + 2]!;
+    if (invert) v = 255 - v;
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  ctx.putImageData(image, 0, 0);
+}
+
 /** Renderuje pełną klatkę na nowym canvasie. */
 export function renderStamped(
   source: CanvasImageSource & { naturalWidth?: number; naturalHeight?: number; width?: number },
@@ -285,11 +296,7 @@ export function renderStamped(
   if (thermal.enabled && thermal.dither !== "off") {
     applyThermal(ctx, canvas.width, canvas.height, thermal);
   } else if (thermal.enabled) {
-    applyPixelEffects(ctx, canvas.width, canvas.height, {
-      ...effects,
-      grain: 0,
-      fade: 0,
-    });
+    toGrayscale(ctx, canvas.width, canvas.height, thermal.invert);
   }
 
   return canvas;
