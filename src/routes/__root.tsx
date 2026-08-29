@@ -77,19 +77,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "LUMA dateback — retro timestampy na zdjęciach" },
+      {
+        name: "description",
+        content:
+          "Dodaj retro, stylizowane stemple daty i czasu do swoich zdjęć. Orange quartz, VHS OSD, film edge i więcej — eksport w pełnej rozdzielczości.",
+      },
+      { name: "author", content: "LUMA" },
+      { property: "og:title", content: "LUMA dateback — retro timestampy na zdjęciach" },
+      {
+        property: "og:description",
+        content:
+          "Dodaj retro, stylizowane stemple daty i czasu do swoich zdjęć. Orange quartz, VHS OSD, film edge i więcej.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=VT323&family=Caveat:wght@500;700&display=swap",
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
