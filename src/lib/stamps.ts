@@ -109,7 +109,7 @@ export const STAMP_PRESETS: StampPreset[] = [
 ];
 
 export function getPreset(id: StampStyleId): StampPreset {
-  return STAMP_PRESETS.find((p) => p.id === id) ?? STAMP_PRESETS[0];
+  return STAMP_PRESETS.find((p) => p.id === id) ?? STAMP_PRESETS[0]!;
 }
 
 /** Domyślna konfiguracja zgodna z makietą */
