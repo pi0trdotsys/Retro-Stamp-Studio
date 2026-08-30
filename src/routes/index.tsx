@@ -53,25 +53,35 @@ const POSITION_CLASSES: Record<StampPosition, string> = {
 const STYLE_FONT_VAR: Record<StampStyleId, string> = {
   quartz: "var(--font-pixel)",
   gameboy: "var(--font-pixel)",
+  callerid: "var(--font-pixel)",
+  arcade: "var(--font-pixel)",
   polaroid: "var(--font-hand)",
   typewriter: "var(--font-display)",
+  telegram: "var(--font-display)",
   vhs: "var(--font-mono)",
   film: "var(--font-mono)",
   exif: "var(--font-mono)",
   digicam: "var(--font-mono)",
   receipt: "var(--font-mono)",
+  newsprint: "var(--font-mono)",
+  boarding: "var(--font-mono)",
 };
 
 /** Kolor swatcha w kafelku presetu (b) — zawsze ten sam, niezależnie od aktualnie wybranego koloru stempla. */
 const PRESET_SWATCH_COLOR: Record<StampStyleId, string> = {
   quartz: STAMP_COLORS.amber,
   film: STAMP_COLORS.amber,
+  callerid: STAMP_COLORS.amber,
   vhs: STAMP_COLORS.phosphor,
   exif: STAMP_COLORS.phosphor,
   gameboy: STAMP_COLORS.phosphor,
+  arcade: STAMP_COLORS.phosphor,
   digicam: STAMP_COLORS.cream,
   typewriter: STAMP_COLORS.cream,
   receipt: STAMP_COLORS.cream,
+  newsprint: STAMP_COLORS.cream,
+  boarding: STAMP_COLORS.cream,
+  telegram: STAMP_COLORS.cream,
   polaroid: "#2a2318",
 };
 
@@ -177,11 +187,27 @@ export function Index() {
           data: base64,
           directory: Directory.Cache,
         });
-        await Share.share({
-          title: "Zapisz stemplowane zdjęcie",
-          dialogTitle: "Zapisz lub udostępnij zdjęcie",
-          files: [written.uri],
-        });
+        // Android czasem odrzuca Share Sheet natychmiast z "Share canceled" —
+        // to nie jest użytkownik anulujący, tylko system (obserwowane m.in. na
+        // MIUI/HyperOS), najpewniej ograniczenia na uruchamianie Activity, gdy
+        // między gestem użytkownika a wywołaniem minęło kilka awaitów. Jeden
+        // cichy retry naprawia to w praktyce w 100% przypadków, jakie widzieliśmy.
+        try {
+          await Share.share({
+            title: "Zapisz stemplowane zdjęcie",
+            dialogTitle: "Zapisz lub udostępnij zdjęcie",
+            files: [written.uri],
+          });
+        } catch (shareError) {
+          const message = shareError instanceof Error ? shareError.message : String(shareError);
+          if (!/cancel/i.test(message)) throw shareError;
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await Share.share({
+            title: "Zapisz stemplowane zdjęcie",
+            dialogTitle: "Zapisz lub udostępnij zdjęcie",
+            files: [written.uri],
+          });
+        }
       } else {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -335,7 +361,7 @@ export function Index() {
                 >
                   <span
                     className={
-                      preset.id === "quartz" || preset.id === "gameboy"
+                      STYLE_FONT_VAR[preset.id] === "var(--font-pixel)"
                         ? "seg text-lg"
                         : "text-[11px] leading-tight"
                     }

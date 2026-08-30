@@ -15,7 +15,12 @@ export type StampStyleId =
   | "digicam"
   | "typewriter"
   | "gameboy"
-  | "receipt";
+  | "receipt"
+  | "newsprint"
+  | "callerid"
+  | "boarding"
+  | "arcade"
+  | "telegram";
 
 export type StampPosition = "TL" | "TR" | "BL" | "BR" | "CT" | "CB";
 
@@ -183,6 +188,65 @@ export const STAMP_PRESETS: StampPreset[] = [
       return [`* * ${y}-${m}-${d} ${time} * *`];
     },
     canvasFont: (px) => `${Math.round(px * 0.55)}px "IBM Plex Mono", monospace`,
+    glow: false,
+  },
+  {
+    id: "newsprint",
+    label: "Newsprint",
+    sublabel: "Wire Photo",
+    format: (date, time) => {
+      const { yy, m, d } = parseDate(date);
+      const month = MONTHS_EN[Math.min(Math.max(Number(m) - 1, 0), 11)]!.toUpperCase();
+      return ["WIREPHOTO", `${d} ${month} '${yy} · ${time}`];
+    },
+    canvasFont: (px) => `700 ${Math.round(px * 0.5)}px "IBM Plex Mono", monospace`,
+    glow: false,
+  },
+  {
+    id: "callerid",
+    label: "Caller ID",
+    sublabel: "Digital",
+    format: (date, time) => {
+      const { m, d } = parseDate(date);
+      const { h12, mm, period } = to12h(time);
+      return [`CALL  ${m}-${d}  ${h12}:${mm}${period[0]!.toLowerCase()}`];
+    },
+    canvasFont: (px) => `${Math.round(px * 1.0)}px VT323, monospace`,
+    glow: true,
+  },
+  {
+    id: "boarding",
+    label: "Boarding",
+    sublabel: "Pass",
+    format: (date, time) => {
+      const { yy, m, d } = parseDate(date);
+      const month = MONTHS_EN[Math.min(Math.max(Number(m) - 1, 0), 11)]!.toUpperCase();
+      return ["BOARDING PASS", `GATE 04 · ${d}${month}${yy} · ${time}`];
+    },
+    canvasFont: (px) => `600 ${Math.round(px * 0.48)}px "IBM Plex Mono", monospace`,
+    glow: false,
+  },
+  {
+    id: "arcade",
+    label: "Arcade",
+    sublabel: "Hi-Score",
+    format: (date, time) => {
+      const { yy, m, d } = parseDate(date);
+      return ["1UP   HI-SCORE", `${d}.${m}.${yy}  ${time}`];
+    },
+    canvasFont: (px) => `${Math.round(px * 0.85)}px VT323, monospace`,
+    glow: true,
+  },
+  {
+    id: "telegram",
+    label: "Telegram",
+    sublabel: "STOP",
+    format: (date, time) => {
+      const { y, m, d } = parseDate(date);
+      const month = MONTHS_EN[Math.min(Math.max(Number(m) - 1, 0), 11)]!.toUpperCase();
+      return [`${month} ${d} STOP`, `${y} STOP ${time}H`];
+    },
+    canvasFont: (px) => `${Math.round(px * 0.5)}px "Space Mono", monospace`,
     glow: false,
   },
 ];

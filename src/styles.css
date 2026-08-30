@@ -89,6 +89,18 @@
     border-color: var(--color-border);
   }
 
+  html {
+    /* Skips the ~300ms double-tap-to-zoom disambiguation delay some Android
+       WebViews use before firing `click`. On at least one real device
+       (Xiaomi/HyperOS) that delay would occasionally swallow a genuine tap
+       entirely — the touch registered (ACTION_DOWN/UP in logcat) but no
+       click ever reached React, so buttons like "Export stamped photo"
+       silently did nothing. touch-action: manipulation still allows
+       scrolling/panning, it only removes the double-tap-zoom gesture this
+       app has no use for anyway. */
+    touch-action: manipulation;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
