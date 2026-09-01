@@ -1,6 +1,6 @@
 <div align="center">
 
-# LUMA dateback
+# 🎞️ LUMA dateback
 
 **Retro timestamps, burned onto your photos.**
 *Web app · Native Android · Zero backend.*
@@ -24,7 +24,27 @@
 
 ---
 
-## ◆ What it is
+## 🖼️ Screenshots
+
+<div align="center">
+
+<img src="docs/screenshots/stamp-gallery.png" width="820" alt="The same photo stamped with six of LUMA dateback's retro styles: Orange Quartz, VHS, Polaroid, Pixel LCD, Newsprint, Caller ID">
+
+<sub>Same frame, six of the fourteen styles.</sub>
+
+<br><br>
+
+<img src="docs/screenshots/interface.png" width="340" alt="App controls: position, size, color swatches, and custom date/time pickers">
+
+<sub>Position · size · color · custom date & time.</sub>
+
+</div>
+
+<br>
+
+---
+
+## 📷 What it is
 
 A single, data‑less screen. Fourteen ways to make a photo look like it came from something else — a 1996 point‑and‑shoot, a VHS camcorder, a Game Boy Camera, a wire‑service print, a boarding pass. Everything renders client‑side on a `<canvas>`, at the photo's native resolution, with no watermark and no server in the loop.
 
@@ -32,7 +52,7 @@ The same screen ships two ways: as a website, and as a signed native Android app
 
 <br>
 
-## ◆ Stamp styles
+## 🏷️ Stamp styles
 
 | | | |
 |---|---|---|
@@ -46,7 +66,7 @@ Every style, position, scale, color, and custom date/time is defined in one file
 
 <br>
 
-## ◆ Under the hood
+## ⚙️ Under the hood
 
 ```
 input           →  drag/drop or file capture, EXIF DateTimeOriginal read on upload
@@ -59,7 +79,7 @@ No accounts. No backend. No analytics. The entire product is `src/lib/stamps.ts`
 
 <br>
 
-## ◆ Run it
+## 🚀 Run it
 
 ```bash
 npm install
@@ -76,7 +96,7 @@ A signed release build needs a local, git‑ignored `android/keystore.properties
 
 <br>
 
-## ◆ Structure
+## 🗂️ Structure
 
 ```
 src/lib/stamps.ts        specification — presets, formatting, colors
@@ -90,7 +110,7 @@ docs/IMPLEMENTATION.md   architecture notes for contributors
 
 <br>
 
-## ◆ Get the app
+## 📲 Get the app
 
 Signed APKs and the Play Store `.aab` are attached to every [release](https://github.com/pi0trdotsys/Retro-Stamp-Studio/releases/latest).
 
